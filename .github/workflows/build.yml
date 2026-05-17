@@ -31,6 +31,9 @@ jobs:
       - name: Expo prebuild
         run: npx expo prebuild --platform android --no-install
 
+      - name: Generate debug keystore
+        run: keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleRelease
