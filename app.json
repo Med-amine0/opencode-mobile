@@ -14,7 +14,8 @@
       }
     },
     "android": {
-      "package": "ai.opencode.mobile"
+      "package": "ai.opencode.mobile",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",
