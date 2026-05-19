@@ -74,24 +74,40 @@ def adb(*args: str) -> str:
     return result.stdout.strip()
 
 
+_step_counter = 0
+
+
 def screenshot_b64() -> str:
-    """Capture emulator screenshot and return as base64 PNG."""
-    # Use exec-out for direct binary pipe (fastest, no intermediate file on device)
-    result = subprocess.run(
-        ["adb", "exec-out", "screencap", "-p"],
-        capture_output=True, timeout=30,
-    )
-    if result.returncode == 0 and len(result.stdout) > 100:
-        return base64.b64encode(result.stdout).decode()
+    """Capture emulator screenshot and return as base64 PNG. Retries on timeout."""
+    global _step_counter
+    _step_counter += 1
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["adb", "exec-out", "screencap", "-p"],
+                capture_output=True, timeout=30,
+            )
+            if result.returncode == 0 and len(result.stdout) > 100:
+                # Save for debugging
+                debug_path = f"/tmp/cua_step_{_step_counter:03d}.png"
+                Path(debug_path).write_bytes(result.stdout)
+                return base64.b64encode(result.stdout).decode()
+        except subprocess.TimeoutExpired:
+            if attempt < 2:
+                time.sleep(3)
+                continue
+            raise
     # Fallback: screencap on device then pull
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         path = f.name
     try:
         subprocess.run(["adb", "shell", "screencap", "-p", "/sdcard/_cua_screen.png"],
-                       capture_output=True, timeout=10)
+                       capture_output=True, timeout=30)
         subprocess.run(["adb", "pull", "/sdcard/_cua_screen.png", path],
                        capture_output=True, timeout=10)
-        return base64.b64encode(Path(path).read_bytes()).decode()
+        data = Path(path).read_bytes()
+        Path(f"/tmp/cua_step_{_step_counter:03d}.png").write_bytes(data)
+        return base64.b64encode(data).decode()
     finally:
         Path(path).unlink(missing_ok=True)
 
@@ -294,12 +310,20 @@ def run_cua(goal: str, max_steps: int = 30, model: str = "gpt-4o",
 
 SMOKE_SCENARIOS = [
     {
-        "name": "connect_and_send",
+        "name": "send_message",
         "goal": (
-            "Open the OpenCode app (package: ai.opencode.mobile). "
-            "If not already connected, tap 'Add Connection', enter IP '100.108.64.76' port '4096', "
-            "and tap Connect. Then create a new session, type 'ping', and send the message. "
-            "Verify that an assistant response bubble appears. Then report done."
+            "You see the OpenCode mobile app. Tap the '+' button to create a new session. "
+            "Type 'ping' in the message input and send it. Wait 5 seconds for the assistant "
+            "to respond. Report success if you see an assistant reply bubble."
+        ),
+    },
+    {
+        "name": "multi_turn",
+        "goal": (
+            "You see the OpenCode mobile app on the Sessions tab. Tap '+' to create a new session. "
+            "Send the message 'what is 2+2'. Wait for the assistant reply. "
+            "Then send a follow-up message 'and 3+3?'. Wait for the second assistant reply. "
+            "Report success if you see two assistant reply bubbles."
         ),
     },
 ]

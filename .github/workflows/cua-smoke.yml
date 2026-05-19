@@ -1,0 +1,77 @@
+name: CUA Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/android-cua-smoke.py"
+      - "src/**"
+      - "app/**"
+      - ".github/workflows/cua-smoke.yml"
+
+jobs:
+  cua-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android system image & create AVD
+        run: |
+          sdkmanager "system-images;android-34;google_apis;x86_64" "emulator"
+          echo "no" | avdmanager create avd -n test -k "system-images;android-34;google_apis;x86_64" --force
+
+      - name: Start emulator
+        run: |
+          emulator -avd test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot &
+          adb wait-for-device
+          timeout 120 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null)" != "1" ]; do sleep 2; done'
+
+      - name: Install dependencies & build APK
+        run: |
+          npm install
+          npx expo prebuild --platform android --no-install
+          keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          cd android && ./gradlew assembleRelease
+
+      - name: Install APK on emulator
+        run: adb install android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Launch app
+        run: |
+          adb shell am start -n ai.opencode.mobile/.MainActivity
+          sleep 5
+
+      - name: Install Python deps
+        run: pip install openai
+
+      - name: Run CUA smoke test
+        env:
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_VERSION: "2024-08-01-preview"
+        run: |
+          python3 scripts/android-cua-smoke.py \
+            --model gpt-5.4 \
+            --include-xml \
+            --goal "You see the OpenCode mobile app. Tap '+' to create a new session. Type 'smoke test' in the message input and send it. Wait 5 seconds for the assistant to respond. Report success if you see an assistant message."
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cua-screenshots
+          path: /tmp/cua_*.png
