@@ -4,26 +4,30 @@
 
 React Native / Expo mobile client for opencode. Connects to an opencode server instance via HTTP + SSE for real-time updates.
 
+**Repo**: `dzianisv/opencode-mobile` (standalone, not part of opencode monorepo)
+**Package name**: `ai.opencode.mobile`
+
 ## Architecture
 
 ```
-packages/mobile/
-├── app/                    # Expo Router file-based routing
-│   ├── (tabs)/             # Tab navigation (sessions, connections, settings)
-│   ├── session/[id].tsx    # Chat screen
-│   └── connection/         # Add/edit connection screens
-├── src/
-│   ├── components/         # Reusable UI components
-│   │   ├── markdown/       # Markdown renderer (wraps react-native-marked)
-│   │   └── AuthGate.tsx    # Biometric auth gate
-│   ├── lib/
-│   │   ├── sdk.ts          # HTTP + SSE client for opencode server API
-│   │   └── types.ts        # Re-exported types
-│   └── stores/             # Zustand state stores
-│       ├── sessions.ts     # Session list, messages, parts
-│       ├── connections.ts  # Server connections, client lifecycle
-│       ├── events.ts       # SSE event stream, status tracking, permissions, questions
-│       └── auth.ts         # Biometric auth
+app/                    # Expo Router file-based routing
+├── (tabs)/             # Tab navigation (sessions, connections, settings)
+├── session/[id].tsx    # Chat screen
+└── connection/         # Add/edit connection screens
+src/
+├── components/         # Reusable UI components
+│   ├── markdown/       # Markdown renderer (wraps react-native-marked)
+│   └── AuthGate.tsx    # Biometric auth gate
+├── lib/
+│   ├── sdk.ts          # HTTP + SSE client for opencode server API
+│   └── types.ts        # Re-exported types
+└── stores/             # Zustand state stores
+    ├── sessions.ts     # Session list, messages, parts
+    ├── connections.ts  # Server connections, client lifecycle
+    ├── events.ts       # SSE event stream, status tracking, permissions, questions
+    └── auth.ts         # Biometric auth
+scripts/
+└── android-cua-smoke.py  # LLM-powered CUA E2E test
 ```
 
 ## Key Patterns
@@ -35,8 +39,6 @@ packages/mobile/
 
 ## Style Guide
 
-Follow the root repo AGENTS.md style guide:
-
 - Prefer `const` over `let`
 - Avoid `else` statements, use early returns
 - Prefer single-word variable names
@@ -47,13 +49,65 @@ Follow the root repo AGENTS.md style guide:
 ## Running
 
 ```bash
-cd packages/mobile
-bun install
-bun start        # Expo dev server
-bun run ios      # iOS simulator
-bun run android  # Android emulator
+npm install
+npx expo start        # Expo dev server
+npx expo run:android  # Android emulator
 ```
 
 ## Connecting
 
 Run `opencode serve --hostname 0.0.0.0 --port 4096` on your machine, then add a connection in the app with your machine's local IP and port 4096.
+
+**Dev server**: `100.108.64.76:4096` (Tailscale, hostname `openclaw-dev-1`)
+
+## Android Emulator (local dev)
+
+```bash
+export PATH="/tmp/android-sdk/platform-tools:/tmp/android-sdk/emulator:$PATH"
+emulator -avd test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -port 5554
+adb wait-for-device
+# Wait for boot:
+timeout 120 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null)" != "1" ]; do sleep 2; done'
+```
+
+SDK location: `/tmp/android-sdk/` (API 34, x86_64 system image).
+
+## CUA Smoke Test (E2E via Vision LLM)
+
+The script `scripts/android-cua-smoke.py` drives the emulator via ADB using a vision model loop (screenshot → LLM → action → repeat).
+
+### Running locally
+
+```bash
+source ~/.env.d/azure-openai.env
+python3 scripts/android-cua-smoke.py --model gpt-5.4 --include-xml
+```
+
+### Azure OpenAI credentials
+
+The correct Azure AI Services endpoint (with actual deployments) is:
+- **Endpoint**: `https://info-mjnxtt51-eastus2.cognitiveservices.azure.com`
+- **Env file**: `~/.env.d/azure-openai.env`
+- **Available vision models**: `gpt-5.4`, `gpt-5.2`, `gpt-5.1`, `gpt-4.1`
+
+> **WARNING**: The `vibe-dev-ai.cognitiveservices.azure.com` resource has NO deployments (only a model catalog). Do NOT use it for inference. Always use `info-mjnxtt51-eastus2`.
+
+### API notes for gpt-5.x models
+
+- Use `max_completion_tokens` (NOT `max_tokens`) — the older param is rejected.
+- Use `AzureOpenAI` client from the `openai` Python SDK with `api_version="2024-08-01-preview"`.
+- Vision works: pass `image_url` with `data:image/png;base64,...` in user message content array.
+
+### CI
+
+GitHub Actions workflow: `.github/workflows/cua-smoke.yml`
+Secrets required: `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` (already set on `dzianisv/opencode-mobile`).
+
+## GitHub Auth
+
+For pushes/gh CLI on this repo: `source ~/.env.d/github-dzianisv.env`
+
+## Related Issues
+
+- Upstream: `anomalyco/opencode#10288`
+- Branch on upstream fork: `feat/android-backbone-10288` on `dzianisv/opencode`

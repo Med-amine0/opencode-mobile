@@ -157,6 +157,27 @@ def execute_action(action: dict) -> str:
         adb("shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(duration))
         return f"swiped ({x1},{y1})->({x2},{y2})"
 
+    elif act == "send":
+        # Auto-locate send button: rightmost clickable ViewGroup in the bottom input bar
+        import re
+        xml = ui_dump()
+        # Find the EditText (message input) and the clickable element immediately after it
+        # The send button is the last clickable ViewGroup in the input row
+        matches = re.findall(r'clickable="true"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+        if matches:
+            # Find the rightmost clickable element near the bottom (y > 2200)
+            bottom_buttons = [(int(x1), int(y1), int(x2), int(y2)) for x1, y1, x2, y2 in matches if int(y1) > 2200]
+            if bottom_buttons:
+                # Rightmost = highest x1
+                send_btn = max(bottom_buttons, key=lambda b: b[0])
+                cx = (send_btn[0] + send_btn[2]) // 2
+                cy = (send_btn[1] + send_btn[3]) // 2
+                adb("shell", "input", "tap", str(cx), str(cy))
+                return f"send button tapped ({cx}, {cy})"
+        # Fallback: tap known location
+        adb("shell", "input", "tap", "996", "2358")
+        return "send button tapped (fallback 996, 2358)"
+
     elif act == "wait":
         secs = float(action.get("seconds", 2))
         time.sleep(secs)
@@ -187,6 +208,7 @@ Available actions:
   {"type": "type", "text": "<string>"}
   {"type": "key", "key": "enter|back|home|delete|tab"}
   {"type": "swipe", "x1": <int>, "y1": <int>, "x2": <int>, "y2": <int>, "duration": <ms>}
+  {"type": "send"}  -- tap the send button (auto-locates via UI hierarchy)
   {"type": "wait", "seconds": <float>}
   {"type": "done", "summary": "<what was accomplished>"}
   {"type": "fail", "reason": "<why the goal cannot be achieved>"}
@@ -194,7 +216,9 @@ Available actions:
 Rules:
 - Issue exactly ONE action per turn as a JSON object. No markdown, no explanation outside JSON.
 - Coordinates are in pixels relative to the screenshot dimensions.
-- After typing text, you may need to dismiss the keyboard (tap elsewhere or press back) before tapping buttons.
+- IMPORTANT: In this app, pressing "enter" inserts a newline, it does NOT send the message.
+  To send a message, use the {"type": "send"} action which auto-locates and taps the send button.
+  After typing, dismiss the keyboard by pressing "back", then use {"type": "send"}.
 - When the goal is fully achieved, respond with {"type": "done", ...}.
 - If stuck after several attempts, respond with {"type": "fail", ...}.
 """
@@ -256,7 +280,7 @@ def run_cua(goal: str, max_steps: int = 30, model: str = "gpt-4o",
 
         # Build user message with screenshot
         content = [
-            {"type": "text", "text": f"Step {step}. Goal: {goal}\nWhat action should I take next?"},
+            {"type": "text", "text": f"Step {step}. Screen is 1080x2400 pixels. Goal: {goal}\nWhat action should I take next?"},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}", "detail": "high"}},
         ]
 
@@ -312,17 +336,18 @@ SMOKE_SCENARIOS = [
     {
         "name": "send_message",
         "goal": (
-            "You see the OpenCode mobile app. Tap the '+' button to create a new session. "
-            "Type 'ping' in the message input and send it. Wait 5 seconds for the assistant "
-            "to respond. Report success if you see an assistant reply bubble."
+            "You see the OpenCode mobile app. Tap the '+' button (top-right) to create a new session. "
+            "Tap the text input at the bottom. Type 'ping'. Press back to dismiss keyboard. "
+            "Use the send action. Wait 5 seconds. "
+            "Report success if you see both a 'You' bubble and an 'Assistant' bubble."
         ),
     },
     {
         "name": "multi_turn",
         "goal": (
-            "You see the OpenCode mobile app on the Sessions tab. Tap '+' to create a new session. "
-            "Send the message 'what is 2+2'. Wait for the assistant reply. "
-            "Then send a follow-up message 'and 3+3?'. Wait for the second assistant reply. "
+            "You see the OpenCode mobile app. Tap '+' (top-right) to create a new session. "
+            "Tap the text input. Type 'what is 2+2'. Press back. Use send action. Wait 5 seconds. "
+            "Then tap the text input again, type 'and 3+3?'. Press back. Use send action. Wait 5 seconds. "
             "Report success if you see two assistant reply bubbles."
         ),
     },
