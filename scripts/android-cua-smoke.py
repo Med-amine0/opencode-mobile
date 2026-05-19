@@ -15,8 +15,30 @@ Requirements:
   ADB in PATH with a connected device/emulator.
 
 Usage:
-  export OPENAI_API_KEY=...
-  python scripts/android-cua-smoke.py --goal "Connect to server 100.108.64.76:4096 and send 'ping'"
+  # OpenAI
+  export OPENAI_API_KEY=sk-...
+  python scripts/android-cua-smoke.py
+
+  # Azure OpenAI (with deployment)
+  export OPENAI_API_KEY=<key>
+  export OPENAI_BASE_URL=https://<resource>.openai.azure.com/openai/deployments/<deployment>/
+  python scripts/android-cua-smoke.py --model gpt-4o
+
+  # Google Gemini (via OpenAI-compat)
+  export GEMINI_API_KEY=AIza...
+  python scripts/android-cua-smoke.py
+
+  # xAI Grok
+  export XAI_API_KEY=xai-...
+  python scripts/android-cua-smoke.py
+
+  # Any OpenAI-compatible endpoint (LiteLLM, Ollama, etc.)
+  export OPENAI_API_KEY=dummy
+  export OPENAI_BASE_URL=http://localhost:4000/v1
+  python scripts/android-cua-smoke.py --model gpt-4o
+
+  # Custom goal
+  python scripts/android-cua-smoke.py --goal "Open settings and toggle dark mode"
 """
 
 import argparse
