@@ -357,14 +357,16 @@ def execute_action(action: dict) -> str:
         return f"swiped ({x1},{y1})->({x2},{y2})"
 
     elif act == "send":
-        # Auto-locate send button: rightmost clickable ViewGroup in the bottom input bar
+        # Auto-locate send button: rightmost clickable ViewGroup in the bottom input bar.
+        # Threshold is screen-relative (bottom 25%) so it works on any emulator
+        # resolution — API 30 default profile is 1080x1920, not the 2400-tall pixel
+        # we previously hardcoded against.
+        screen_w, screen_h = get_screen_size()
+        bottom_threshold = int(screen_h * 0.75)
         xml = ui_dump()
-        # Find the EditText (message input) and the clickable element immediately after it
-        # The send button is the last clickable ViewGroup in the input row
         matches = re.findall(r'clickable="true"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
         if matches:
-            # Find the rightmost clickable element near the bottom (y > 2200)
-            bottom_buttons = [(int(x1), int(y1), int(x2), int(y2)) for x1, y1, x2, y2 in matches if int(y1) > 2200]
+            bottom_buttons = [(int(x1), int(y1), int(x2), int(y2)) for x1, y1, x2, y2 in matches if int(y1) > bottom_threshold]
             if bottom_buttons:
                 # Rightmost = highest x1
                 send_btn = max(bottom_buttons, key=lambda b: b[0])
@@ -372,9 +374,11 @@ def execute_action(action: dict) -> str:
                 cy = (send_btn[1] + send_btn[3]) // 2
                 adb("shell", "input", "tap", str(cx), str(cy))
                 return f"send button tapped ({cx}, {cy})"
-        # Fallback: tap known location
-        adb("shell", "input", "tap", "996", "2358")
-        return "send button tapped (fallback 996, 2358)"
+        # Fallback: tap bottom-right corner of the screen, offset slightly inward
+        fx = screen_w - 80
+        fy = screen_h - 120
+        adb("shell", "input", "tap", str(fx), str(fy))
+        return f"send button tapped (fallback {fx}, {fy})"
 
     elif act == "wait":
         secs = float(action.get("seconds", 2))
