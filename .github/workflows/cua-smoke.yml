@@ -21,10 +21,12 @@ jobs:
       # CUA driver uses chat-completions; 2024-08-01-preview is sufficient.
       AZURE_OPENAI_API_VERSION: "2024-08-01-preview"
       # opencode's @ai-sdk/azure provider hits the new /openai/v1/responses
-      # endpoint, which requires 2025-03-01-preview or newer. Without this,
-      # probe returns "API version not supported" -> MODEL_CAPABLE=false ->
-      # send_message/multi_turn scenarios get skipped (#22).
-      OPENCODE_AZURE_API_VERSION: "2025-04-01-preview"
+      # endpoint. That endpoint accepts ONLY api-version=preview or v1 — every
+      # date-based value (2024-*-preview, 2025-*-preview, 2025-04-01-preview)
+      # returns 400 "API version not supported" and forces MODEL_CAPABLE=false,
+      # which makes send_message/multi_turn scenarios get skipped (#22).
+      # `preview` is also the @ai-sdk/azure 3.x default.
+      OPENCODE_AZURE_API_VERSION: "preview"
       # Android emulator reaches the runner host loopback via 10.0.2.2.
       # A real `opencode serve` runs on the host (see steps below), making this a true E2E.
       OPENCODE_URL: "http://10.0.2.2:4096"
