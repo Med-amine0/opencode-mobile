@@ -565,16 +565,21 @@ SMOKE_SCENARIOS = [
         "goal": (
             "You see the OpenCode mobile app. Tap the '+' button (top-right) to create a new session. "
             "Tap the text input at the bottom. Type 'ping'. Press back to dismiss keyboard. "
-            "Use the send action. Wait 5 seconds. "
-            "Report success if you see both a 'You' bubble and an 'Assistant' bubble."
+            "Use the send action. Wait 5 seconds, then take another screenshot. "
+            "If you don't yet see an assistant reply, wait another 10 seconds and re-check (assistant replies can take 15+ seconds). "
+            "If still no assistant bubble, wait another 15 seconds and re-check one more time. "
+            "Report success if you see both a 'You' bubble and an 'Assistant' bubble. "
+            "Report failure only after at least 30 seconds of total waiting with no assistant bubble."
         ),
     },
     {
         "name": "multi_turn",
         "goal": (
             "You see the OpenCode mobile app. Tap '+' (top-right) to create a new session. "
-            "Tap the text input. Type 'what is 2+2'. Press back. Use send action. Wait 5 seconds. "
-            "Then tap the text input again, type 'and 3+3?'. Press back. Use send action. Wait 5 seconds. "
+            "Tap the text input. Type 'what is 2+2'. Press back. Use send action. "
+            "Wait up to 30 seconds for an assistant reply (re-check every 10 seconds). "
+            "Then tap the text input again, type 'and 3+3?'. Press back. Use send action. "
+            "Wait up to 30 seconds for the second assistant reply (re-check every 10 seconds). "
             "Report success if you see two assistant reply bubbles."
         ),
     },
