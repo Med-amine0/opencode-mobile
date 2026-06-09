@@ -186,9 +186,9 @@ jobs:
           # Choose the scenario set HERE (bash) and export it, so the emulator step's
           # script (run by dash, which mangles multi-line if/fi blocks) stays single-line.
           if [ "$CAPABLE" = "true" ]; then
-            SCENARIOS="connect_and_verify_sessions,send_message,verify_session_list"
+            SCENARIOS="connect_and_verify_existing_sessions,send_message,verify_session_list"
           else
-            SCENARIOS="connect_and_verify_sessions,verify_session_list"
+            SCENARIOS="connect_and_verify_existing_sessions,verify_session_list"
             echo "WARN: opencode not model-capable in CI; excluding send_message/multi_turn (environmental, not an app bug)."
           fi
           echo "SCENARIOS=$SCENARIOS" >> "$GITHUB_OUTPUT"

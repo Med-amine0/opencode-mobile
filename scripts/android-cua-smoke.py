@@ -620,6 +620,22 @@ def _connect_and_verify_sessions_goal(url: str) -> str:
     )
 
 
+def _connect_and_verify_existing_sessions_goal(url: str) -> str:
+    return (
+        f"You see the OpenCode mobile app. "
+        "Go to the Connections tab (bottom navigation bar). "
+        "If a connection to the server already exists, tap it to make it active and skip to the next step. "
+        "Otherwise tap '+' or 'Add Connection', "
+        f"enter the URL '{url}', leave username/password blank, tap Save or Connect. "
+        "Wait 3 seconds. "
+        "Now navigate to the Sessions tab (bottom navigation bar). "
+        "Wait 5 seconds for sessions to load. "
+        "Do NOT create a new session. Do NOT tap the '+' button. This scenario verifies whether existing sessions load immediately after connect. "
+        "Report SUCCESS only if you see at least one pre-existing session listed without creating a new one. "
+        "Report FAILURE if the sessions list is empty, shows 'No sessions yet', shows an error, or only becomes non-empty after creating a new session."
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Android CUA smoke test")
     parser.add_argument("--goal", help="Custom goal (overrides built-in scenarios)")
@@ -646,8 +662,8 @@ def main():
     parser.add_argument(
         "--scenarios",
         help="Comma-separated explicit scenario set to run, e.g. "
-             "'connect_and_verify_sessions,send_message,verify_session_list'. "
-             "Valid names: connect_and_verify_sessions, send_message, multi_turn, "
+             "'connect_and_verify_existing_sessions,send_message,verify_session_list'. "
+             "Valid names: connect_and_verify_existing_sessions, connect_and_verify_sessions, send_message, multi_turn, "
              "verify_session_list. Overrides --only-connect-scenario and the default set.",
     )
     args = parser.parse_args()
@@ -665,10 +681,17 @@ def main():
         "name": "connect_and_verify_sessions",
         "goal": _connect_and_verify_sessions_goal(connect_url),
     }
+    connect_existing_scenario = {
+        "name": "connect_and_verify_existing_sessions",
+        "goal": _connect_and_verify_existing_sessions_goal(connect_url),
+    }
 
     if args.scenarios:
         # Explicit named set (CI widened gate). Look up by name across the full catalog.
-        catalog = {connect_scenario["name"]: connect_scenario}
+        catalog = {
+            connect_existing_scenario["name"]: connect_existing_scenario,
+            connect_scenario["name"]: connect_scenario,
+        }
         for s in SMOKE_SCENARIOS:
             catalog[s["name"]] = s
         requested = [n.strip() for n in args.scenarios.split(",") if n.strip()]
@@ -679,12 +702,12 @@ def main():
         scenarios = [catalog[n] for n in requested]
     elif args.only_connect_scenario:
         # CI true-E2E: just connect to the local opencode server and verify the list.
-        scenarios = [connect_scenario]
+        scenarios = [connect_existing_scenario]
     else:
         scenarios = [{"name": "custom", "goal": args.goal}] if args.goal else list(SMOKE_SCENARIOS)
         # Keep connect-and-verify in the default smoke path so regressions are exercised.
         if not args.goal and not args.skip_connect_scenario:
-            scenarios.append(connect_scenario)
+            scenarios.append(connect_existing_scenario)
 
     results = []
     for scenario in scenarios:
