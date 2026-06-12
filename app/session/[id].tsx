@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from "react-native"
 
 
@@ -77,6 +78,8 @@ export default function SessionScreen() {
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const insets = useSafeAreaInsets()
+  const { height: winHeight } = useWindowDimensions()
+  const FIXED_HEIGHT = winHeight * 0.55
 
   const flatListRef = useRef<FlatList>(null)
   const modelSheetRef = useRef<BottomSheet>(null)
@@ -475,8 +478,8 @@ export default function SessionScreen() {
       />
 
       <KeyboardAvoidingView
-        style={[s.container, isDark && s.containerDark]}
-        behavior="padding"
+        style={[s.container, isDark && s.containerDark, { height: FIXED_HEIGHT }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Session info pulldown */}
