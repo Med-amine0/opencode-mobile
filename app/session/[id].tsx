@@ -79,7 +79,7 @@ export default function SessionScreen() {
   const isDark = colorScheme === "dark"
   const insets = useSafeAreaInsets()
   const { height: winHeight } = useWindowDimensions()
-  const FIXED_HEIGHT = winHeight * 0.55
+  const FIXED_HEIGHT = winHeight * 0.60
 
   const flatListRef = useRef<FlatList>(null)
   const modelSheetRef = useRef<BottomSheet>(null)
