@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  TextInput,
   StyleSheet,
   useColorScheme,
   Linking,
@@ -71,8 +72,9 @@ export default function SettingsScreen() {
   const isDark = colorScheme === "dark"
 
   const { settings, hasBiometrics, updateSettings, lock } = useAuth()
-  const { notifications, setNotification } = useSettings()
+  const { keyboardHeightPercent, setKeyboardHeightPercent, notifications, setNotification } = useSettings()
   const [osGranted, setOsGranted] = useState<boolean | null>(null)
+  const [heightPctText, setHeightPctText] = useState(String(keyboardHeightPercent))
 
   // Telemetry consent: hasTelemetryConsent() returns null (unknown), true, or false.
   // We initialise local state from in-memory value; updates call setTelemetryConsent().
@@ -181,6 +183,41 @@ export default function SettingsScreen() {
             </Text>
           </View>
         )}
+      </SettingSection>
+
+      <SettingSection title="Appearance" isDark={isDark}>
+        <SettingRow
+          icon="phone-portrait"
+          label="Chat Height (%)"
+          description="How much of the screen the chat uses (30–100)"
+          isDark={isDark}
+          right={
+            <TextInput
+              style={[styles.heightInput, isDark && styles.heightInputDark]}
+              value={heightPctText}
+              onChangeText={setHeightPctText}
+              onBlur={() => {
+                const num = parseInt(heightPctText, 10)
+                if (!isNaN(num) && num >= 30 && num <= 100) {
+                  setKeyboardHeightPercent(num)
+                } else {
+                  setHeightPctText(String(keyboardHeightPercent))
+                }
+              }}
+              onSubmitEditing={() => {
+                const num = parseInt(heightPctText, 10)
+                if (!isNaN(num) && num >= 30 && num <= 100) {
+                  setKeyboardHeightPercent(num)
+                } else {
+                  setHeightPctText(String(keyboardHeightPercent))
+                }
+              }}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              maxLength={3}
+            />
+          }
+        />
       </SettingSection>
 
       <SettingSection title="Privacy" isDark={isDark}>
@@ -321,5 +358,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999999",
     textAlign: "center",
+  },
+  heightInput: {
+    width: 56,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    color: "#0a0a0a",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    padding: 0,
+  },
+  heightInputDark: {
+    backgroundColor: "#2a2a2a",
+    color: "#ffffff",
   },
 })

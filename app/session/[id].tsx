@@ -34,6 +34,7 @@ import {
   type SlashCommand,
   type Attachment,
 } from "../../src/components/chat"
+import { useSettings } from "../../src/stores/settings"
 import { useSessions } from "../../src/stores/sessions"
 import { useEvents, refreshPending } from "../../src/stores/events"
 import { useConnections } from "../../src/stores/connections"
@@ -79,7 +80,8 @@ export default function SessionScreen() {
   const isDark = colorScheme === "dark"
   const insets = useSafeAreaInsets()
   const { height: winHeight } = useWindowDimensions()
-  const FIXED_HEIGHT = winHeight * 0.60
+  const keyboardPct = useSettings((s) => s.keyboardHeightPercent)
+  const FIXED_HEIGHT = winHeight * (keyboardPct / 100)
 
   const flatListRef = useRef<FlatList>(null)
   const modelSheetRef = useRef<BottomSheet>(null)

@@ -7,11 +7,13 @@ const SETTINGS_KEY = "opencode_settings"
 
 interface Settings {
   pageSize: number
+  keyboardHeightPercent: number
   notifications: Record<Category, boolean>
 }
 
 const DEFAULTS: Settings = {
   pageSize: 25,
+  keyboardHeightPercent: 60,
   notifications: { ...defaultPreferences },
 }
 
@@ -19,11 +21,12 @@ interface SettingsState extends Settings {
   loaded: boolean
   load: () => Promise<void>
   setPageSize: (size: number) => Promise<void>
+  setKeyboardHeightPercent: (pct: number) => Promise<void>
   setNotification: (category: Category, enabled: boolean) => Promise<void>
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  return { pageSize: get().pageSize, notifications: get().notifications }
+  return { pageSize: get().pageSize, keyboardHeightPercent: get().keyboardHeightPercent, notifications: get().notifications }
 }
 
 async function persist(settings: Settings) {
@@ -49,6 +52,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     const clamped = clampPageSize(size)
     set({ pageSize: clamped })
     await persist({ ...snapshot(get), pageSize: clamped })
+  },
+
+  setKeyboardHeightPercent: async (pct) => {
+    const clamped = Math.min(100, Math.max(30, Math.round(pct)))
+    set({ keyboardHeightPercent: clamped })
+    await persist({ ...snapshot(get), keyboardHeightPercent: clamped })
   },
 
   setNotification: async (category, enabled) => {
