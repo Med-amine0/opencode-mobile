@@ -124,6 +124,7 @@ export default function SessionScreen() {
 
   const shortDir = getShortDir(currentSession?.directory)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const isNearBottom = useRef(true)
 
   // Voice input — transcript appends to the text input on completion
   const speech = useSpeech(
@@ -346,7 +347,15 @@ export default function SessionScreen() {
   // In inverted mode, offset 0 = bottom. Show scroll button when scrolled away from bottom.
   const handleScroll = useCallback((event: any) => {
     const { contentOffset } = event.nativeEvent
-    setShowScrollButton(contentOffset.y > 200)
+    isNearBottom.current = contentOffset.y <= 200
+    setShowScrollButton(!isNearBottom.current)
+  }, [])
+
+  // Auto-scroll to bottom when content grows (streaming) if user hasn't scrolled up
+  const handleContentSizeChange = useCallback(() => {
+    if (isNearBottom.current) {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false })
+    }
   }, [])
 
   // Debounce: onEndReached can fire multiple times during a single scroll gesture
@@ -501,6 +510,7 @@ export default function SessionScreen() {
               contentContainerStyle={s.messageList}
               onScroll={handleScroll}
               scrollEventThrottle={100}
+              onContentSizeChange={handleContentSizeChange}
               onEndReached={handleLoadMore}
               onEndReachedThreshold={0.5}
               // Prevent jump when older messages are prepended
