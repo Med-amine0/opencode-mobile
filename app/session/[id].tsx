@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native"
 
-const AvoidView = Platform.OS === "ios" ? KeyboardAvoidingView : View
+
 import { useLocalSearchParams, Stack, useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -474,9 +474,9 @@ export default function SessionScreen() {
         }}
       />
 
-      <AvoidView
+      <KeyboardAvoidingView
         style={[s.container, isDark && s.containerDark]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Session info pulldown */}
@@ -649,7 +649,7 @@ export default function SessionScreen() {
             )}
           </View>
         </View>
-      </AvoidView>
+      </KeyboardAvoidingView>
 
       {/* Model picker bottom sheet */}
       <ModelPicker
