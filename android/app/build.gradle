@@ -81,12 +81,6 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-apply from: new File(["node", "--print", "require('path').dirname(require.resolve('@sentry/react-native/package.json'))"].execute().text.trim(), "sentry.gradle")
-
-// Skip Sentry sourcemap upload when no auth token is configured
-tasks.matching { it.name.contains('SentryUpload') }.configureEach {
-    enabled = System.getenv("SENTRY_AUTH_TOKEN") != null && !System.getenv("SENTRY_AUTH_TOKEN").isEmpty()
-}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
