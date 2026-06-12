@@ -477,11 +477,11 @@ export default function SessionScreen() {
         }}
       />
 
-      <KeyboardAvoidingView
-        style={[s.container, isDark && s.containerDark, { height: FIXED_HEIGHT }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      {Platform.OS === "ios" ? (
+        <KeyboardAvoidingView style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]} behavior="padding" keyboardVerticalOffset={90}>
+      ) : (
+        <View style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]}>
+      )}
         {/* Session info pulldown */}
         <SessionInfo
           session={currentSession}
