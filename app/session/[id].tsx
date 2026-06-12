@@ -452,6 +452,9 @@ export default function SessionScreen() {
   const agentColor = currentAgent?.color || "#8b5cf6"
   const modelLabel = model?.modelID ? model.modelID.split("/").pop() || model.modelID : "default"
 
+  const Wrapper = Platform.OS === "ios" ? KeyboardAvoidingView : View
+  const wrapperProps = Platform.OS === "ios" ? { behavior: "padding" as const, keyboardVerticalOffset: 90 } : {}
+
   return (
     <>
       <Stack.Screen
@@ -477,11 +480,7 @@ export default function SessionScreen() {
         }}
       />
 
-      {Platform.OS === "ios" ? (
-        <KeyboardAvoidingView style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]} behavior="padding" keyboardVerticalOffset={90}>
-      ) : (
-        <View style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]}>
-      )}
+      <Wrapper style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]} {...wrapperProps}>
         {/* Session info pulldown */}
         <SessionInfo
           session={currentSession}
@@ -652,7 +651,7 @@ export default function SessionScreen() {
             )}
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </Wrapper>
 
       {/* Model picker bottom sheet */}
       <ModelPicker
