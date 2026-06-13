@@ -8,6 +8,7 @@ import {
   StyleSheet,
   useColorScheme,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
   Alert,
@@ -81,13 +82,13 @@ export default function SessionScreen() {
   const insets = useSafeAreaInsets()
   const { height: winHeight } = useWindowDimensions()
   const keyboardPct = useSettings((s) => s.keyboardHeightPercent)
-  const FIXED_HEIGHT = winHeight * (keyboardPct / 100)
 
   const flatListRef = useRef<FlatList>(null)
   const modelSheetRef = useRef<BottomSheet>(null)
   const [input, setInput] = useState("")
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showInfo, setShowInfo] = useState(false)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
 
   const {
     currentSession,
@@ -379,6 +380,16 @@ export default function SessionScreen() {
     if (!loadingMore) loadingTriggered.current = false
   }, [loadingMore])
 
+  // Track keyboard visibility for dynamic height
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true))
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false))
+    return () => {
+      showSub.remove()
+      hideSub.remove()
+    }
+  }, [])
+
   const handlePermissionReply = async (requestID: string, reply: "once" | "always" | "reject") => {
     if (!sessionClient || !sessionID) return
     // Snapshot for rollback
@@ -482,7 +493,7 @@ export default function SessionScreen() {
         }}
       />
 
-      <Wrapper style={[s.container, isDark && s.containerDark, { flex: 0, height: FIXED_HEIGHT }]} {...wrapperProps}>
+      <Wrapper style={[s.container, isDark && s.containerDark, Platform.OS === "android" ? (keyboardVisible ? { flex: 0, height: winHeight * (keyboardPct / 100) } : { flex: 1 }) : { flex: 0, height: winHeight * (keyboardPct / 100) }]} {...wrapperProps}>
         {/* Session info pulldown */}
         <SessionInfo
           session={currentSession}
