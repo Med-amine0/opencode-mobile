@@ -42,6 +42,7 @@ import { useConnections } from "../../src/stores/connections"
 import { useAuth } from "../../src/stores/auth"
 import { useCatalog } from "../../src/stores/catalog"
 import { useSpeech } from "../../src/lib/speech"
+import { useTts } from "../../src/lib/tts"
 
 // --- Builtin slash commands ---
 const BUILTIN_COMMANDS: SlashCommand[] = [
@@ -140,6 +141,9 @@ export default function SessionScreen() {
       setInput((prev) => (prev ? prev + " " + text : text))
     }, []),
   )
+
+  const { muted, speaking: ttsSpeaking, toggleMute, feedText, stopSpeaking } = useTts()
+  const spokenPartsRef = useRef<Set<string>>(new Set())
 
   // Slash command state
   const slashActive = input.startsWith("/") && !input.includes(" ")
@@ -390,6 +394,32 @@ export default function SessionScreen() {
     }
   }, [])
 
+  // Feed new AI text parts to TTS as they stream in
+  useEffect(() => {
+    if (!isSending || !messages) return
+    // Find the last assistant message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.role !== "assistant") continue
+      const msgParts = parts[msg.id]
+      if (!msgParts) break
+      for (const p of msgParts) {
+        if (p.type !== "text" || !p.text) continue
+        if (spokenPartsRef.current.has(p.id)) continue
+        spokenPartsRef.current.add(p.id)
+        feedText(p.text)
+      }
+      break
+    }
+  }, [isSending, messages, parts, feedText])
+
+  // Clear spoken parts when sending stops
+  useEffect(() => {
+    if (!isSending) {
+      spokenPartsRef.current.clear()
+    }
+  }, [isSending])
+
   const handlePermissionReply = async (requestID: string, reply: "once" | "always" | "reject") => {
     if (!sessionClient || !sessionID) return
     // Snapshot for rollback
@@ -618,9 +648,17 @@ export default function SessionScreen() {
           style={[s.inputContainer, isDark && s.inputContainerDark, { paddingBottom: Math.max(12, insets.bottom) }]}
         >
           <View style={s.inputRow}>
-            {/* Attach button */}
-            <TouchableOpacity style={s.attachBtn} onPress={pickFromLibrary} onLongPress={pickFromCamera}>
-              <Ionicons name="add-circle-outline" size={26} color={isDark ? "#888888" : "#666666"} />
+            {/* TTS speaker button */}
+            <TouchableOpacity
+              style={s.attachBtn}
+              onPress={toggleMute}
+              onLongPress={ttsSpeaking ? stopSpeaking : undefined}
+            >
+              <Ionicons
+                name={muted ? "volume-mute" : ttsSpeaking ? "volume-high" : "volume-high-outline"}
+                size={24}
+                color={ttsSpeaking ? "#22c55e" : isDark ? "#888888" : "#666666"}
+              />
             </TouchableOpacity>
 
             {/* Clipboard paste button */}
