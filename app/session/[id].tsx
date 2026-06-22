@@ -144,6 +144,7 @@ export default function SessionScreen() {
 
   const { muted, speaking: ttsSpeaking, toggleMute, feedText, stopSpeaking } = useTts()
   const spokenPartsRef = useRef<Set<string>>(new Set())
+  const preSendingMsgIdsRef = useRef<Set<string>>(new Set())
 
   // Slash command state
   const slashActive = input.startsWith("/") && !input.includes(" ")
@@ -401,6 +402,8 @@ export default function SessionScreen() {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i]
       if (msg.role !== "assistant") continue
+      // Skip messages that existed before this send started
+      if (preSendingMsgIdsRef.current.has(msg.id)) break
       const msgParts = parts[msg.id]
       if (!msgParts) break
       for (const p of msgParts) {
@@ -417,6 +420,14 @@ export default function SessionScreen() {
   useEffect(() => {
     if (!isSending) {
       spokenPartsRef.current.clear()
+      preSendingMsgIdsRef.current.clear()
+    }
+  }, [isSending])
+
+  // Snapshot existing message IDs when sending starts so we don't re-read old messages
+  useEffect(() => {
+    if (isSending && messages) {
+      preSendingMsgIdsRef.current = new Set(messages.map((m) => m.id))
     }
   }, [isSending])
 
